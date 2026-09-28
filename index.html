@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bhaskara-Calc — by Ramiro Mai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       rgba(15,15,13,0.55);
+      --card:     rgba(255,255,255,0.10);
+      --card-solid: rgba(20,20,18,0.72);
+      --border:   rgba(255,255,255,0.14);
+      --text:     #f0efe9;
+      --muted:    rgba(240,239,233,0.55);
+      --faint:    rgba(240,239,233,0.3);
+      --green-bg: rgba(42,122,56,0.25); --green-fg: #7dd98a;
+      --amber-bg: rgba(160,106,0,0.25); --amber-fg: #f5c842;
+      --red-bg:   rgba(179,48,48,0.25); --red-fg:   #f47a7a;
+      --blue-bg:  rgba(26,86,196,0.25); --blue-fg:  #7aabf4;
+      --mono: 'DM Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+      --radius: 14px;
+      --radius-sm: 9px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--sans);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ── VIDEO BG ── */
+    #yt-bg {
+      position: fixed;
+      top: 50%; left: 50%;
+      width: 100vw; height: 100vh;
+      min-width: calc(100vh * 16/9);
+      min-height: calc(100vw * 9/16);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: -2;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: rgba(10,10,8,0.62);
+      z-index: -1;
+      backdrop-filter: blur(2px);
+    }
+
+    /* ── VIDEO INPUT CARD ── */
+    #yt-input-card {
+      background: var(--card-solid);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    #yt-input-card .field { flex: 1; }
+    #yt-input-card label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    #yt-url-input {
+      width: 100%;
+      padding: 8px 11px;
+      font-size: 13px;
+      font-family: var(--mono);
+      color: var(--text);
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+    }
+    #yt-url-input::placeholder { color: var(--faint); }
+    #yt-url-input:focus { border-color: rgba(255,255,255,0.3); }
+
+    /* ── LAYOUT ── */
+    .page { max-width: 540px; margin: 0 auto; }
+
+    .top-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .top-header h1 { font-size: 22px; font-weight: 500; text-shadow: 0 1px 8px rgba(0,0,0,0.6); }
+    .top-header p { font-size: 13px; font-family: var(--mono); color: var(--faint); }
+    .byline { font-size: 11px; font-family: var(--sans); color: var(--faint); margin-top: 3px; letter-spacing: 0.03em; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--card-solid);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      backdrop-filter: blur(12px);
+    }
+
+    /* ── INPUTS ── */
+    .inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .field input[type=number] {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 16px;
+      font-family: var(--mono);
+      font-weight: 500;
+      color: var(--text);
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+      -moz-appearance: textfield;
+    }
+    .field input[type=number]::-webkit-outer-spin-button,
+    .field input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .field input[type=number]::placeholder { color: var(--faint); font-weight: 400; }
+    .field input[type=number]:focus { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.1); }
+
+    /* ── EQ PREVIEW ── */
+    #eq-preview {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      min-height: 18px;
+      margin-bottom: 1rem;
+    }
+
+    /* ── FORMAT TOGGLE ── */
+    .format-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 1rem;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .toggle-pills {
+      display: flex;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .toggle-pills button {
+      padding: 4px 12px;
+      font-size: 12px;
+      font-family: var(--sans);
+      font-weight: 500;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--muted);
+      transition: background 0.15s, color 0.15s;
+    }
+    .toggle-pills button.active {
+      background: rgba(255,255,255,0.18);
+      color: var(--text);
+    }
+
+    /* ── BUTTONS ── */
+    .btn-row { display: flex; gap: 8px; }
+    .btn {
+      flex: 1;
+      padding: 10px;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: rgba(240,239,233,0.92); color: #1a1a18; }
+    .btn-primary:hover { background: #ffffff; }
+    .btn-ghost { background: rgba(255,255,255,0.08); color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: rgba(255,255,255,0.14); color: var(--text); }
+
+    /* ── DIVIDER ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+    /* ── META ── */
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 13px;
+    }
+    .meta-row:last-child { border-bottom: none; }
+    .meta-row .lbl { color: var(--muted); }
+    .meta-row .val { font-family: var(--mono); font-weight: 500; }
+
+    /* ── FORMULA BOX ── */
+    .formula-box {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin: 1rem 0;
+    }
+    .formula-box .flabel { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .formula-box .ftext  { font-size: 13px; font-family: var(--mono); color: rgba(240,239,233,0.75); }
+
+    /* ── ROOTS ── */
+    .roots-grid { display: grid; gap: 10px; margin-top: 1rem; }
+    .roots-grid.two { grid-template-columns: 1fr 1fr; }
+    .roots-grid.one { grid-template-columns: 1fr; }
+
+    .root-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem;
+      text-align: center;
+    }
+    .root-card .rlabel { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+    .root-card .rval { font-size: 22px; font-weight: 500; font-family: var(--mono); color: var(--text); }
+    .root-card .rval.complex { font-size: 15px; }
+    .root-card .rval-alt { font-size: 13px; color: var(--muted); font-family: var(--mono); margin-top: 5px; }
+
+    /* fraction display */
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      gap: 0;
+      line-height: 1.1;
+    }
+    .frac .num { border-bottom: 1.5px solid var(--text); padding-bottom: 2px; font-size: 14px; }
+    .frac .den { padding-top: 2px; font-size: 14px; }
+
+    /* ── BADGE ── */
+    .badge {
+      display: block;
+      margin-top: 1rem;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+    }
+    .badge.pos { background: var(--green-bg); color: var(--green-fg); }
+    .badge.zer { background: var(--amber-bg); color: var(--amber-fg); }
+    .badge.neg { background: var(--red-bg);   color: var(--red-fg);   }
+
+    /* ── STEPS ── */
+    .steps-list { list-style: none; counter-reset: steps; }
+    .steps-list li {
+      counter-increment: steps;
+      display: flex;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 13px;
+      align-items: flex-start;
+    }
+    .steps-list li:last-child { border-bottom: none; }
+    .steps-list li::before {
+      content: counter(steps);
+      min-width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(240,239,233,0.15);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .steps-list li .step-math { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── CHART ── */
+    .chart-wrap { position: relative; height: 240px; }
+
+    /* ── VERIFY ── */
+    .verify-row { display: flex; gap: 8px; align-items: flex-end; }
+    .verify-row .field { flex: 1; }
+    .verify-row button { flex-shrink: 0; padding: 10px 16px; }
+    #verify-result {
+      margin-top: 10px;
+      font-size: 13px;
+      font-family: var(--mono);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      display: none;
+    }
+    #verify-result.ok  { background: var(--green-bg); color: var(--green-fg); }
+    #verify-result.err { background: var(--red-bg);   color: var(--red-fg);   }
+    #verify-result.warn{ background: var(--amber-bg); color: var(--amber-fg); }
+
+    /* ── HISTORY ── */
+    #history-list { list-style: none; }
+    #history-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background 0.1s;
+    }
+    #history-list li:last-child { border-bottom: none; }
+    #history-list li:hover { background: rgba(255,255,255,0.07); }
+    #history-list li .heq    { font-family: var(--mono); color: var(--text); }
+    #history-list li .hroots { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+    /* ── SHARE ── */
+    .share-row { display: flex; gap: 8px; }
+    #share-url {
+      flex: 1;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-family: var(--mono);
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      outline: none;
+    }
+    #copy-feedback { font-size: 12px; color: var(--green-fg); margin-top: 6px; display: none; }
+
+    /* ── SECTION TOGGLE ── */
+    .section-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+    h2 { font-size: 13px; font-weight: 500; letter-spacing: 0.05em; color: var(--muted); text-transform: uppercase; margin-bottom: 0; }
+    .toggle-icon { font-size: 16px; color: var(--faint); transition: transform 0.2s; }
+    .toggle-icon.open { transform: rotate(180deg); }
+    .collapsible { overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
+    .collapsible.open { max-height: 2000px; }
+    .card .collapsible { margin-top: 1rem; }
+
+    .hidden { display: none !important; }
+    .error-msg { font-size: 13px; color: var(--red-fg); text-align: center; padding: 6px 0; }
+
+    /* ── SHARE DESC ── */
+    .share-desc { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<img id="yt-bg" src="bg.jpg" alt="" />
+
+<div class="page">
+
+  <div class="top-header">
+    <div>
+      <h1>Bhaskara-Calc</h1>
+      <p class="byline">by Ramiro Mai &nbsp;·&nbsp; ax² + bx + c = 0</p>
+    </div>
+  </div>
+
+  <!-- INPUT CARD -->
+  <div class="card">
+    <div class="inputs">
+      <div class="field">
+        <label for="coefA">a</label>
+        <input type="number" id="coefA" placeholder="1" oninput="updatePreview()" />
+      </div>
+      <div class="field">
+        <label for="coefB">b</label>
+        <input type="number" id="coefB" placeholder="−5" oninput="updatePreview()" />
+      </div>
+      <div class="field">
+        <label for="coefC">c</label>
+        <input type="number" id="coefC" placeholder="6" oninput="updatePreview()" />
+      </div>
+    </div>
+
+    <div id="eq-preview">—</div>
+
+    <!-- FORMAT TOGGLE -->
+    <div class="format-toggle">
+      <span>Mostrar resultados como:</span>
+      <div class="toggle-pills">
+        <button id="pill-dec" class="active" onclick="setFormat('dec')">Decimal</button>
+        <button id="pill-frac" onclick="setFormat('frac')">Fracción</button>
+        <button id="pill-both" onclick="setFormat('both')">Ambos</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="calcular()">Calcular raíces</button>
+      <button class="btn btn-ghost" onclick="limpiar()">Limpiar</button>
+    </div>
+  </div>
+
+  <!-- RESULT SECTION -->
+  <div id="result-section" class="hidden">
+
+    <div class="card">
+      <div class="meta-row"><span class="lbl">Discriminante &nbsp;Δ = b² − 4ac</span><span class="val" id="disc-val"></span></div>
+      <div class="formula-box">
+        <p class="flabel">Fórmula aplicada</p>
+        <p class="ftext" id="formula-text"></p>
+      </div>
+      <div id="raices-container"></div>
+      <div id="tipo-badge"></div>
+    </div>
+
+    <!-- PARABOLA -->
+    <div class="card">
+      <div class="section-toggle" onclick="toggleSection('graph')">
+        <h2>Gráfica de la parábola</h2>
+        <span class="toggle-icon open" id="graph-icon">▾</span>
+      </div>
+      <div class="collapsible open" id="graph-body">
+        <div class="chart-wrap"><canvas id="parabolaChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- STEPS -->
+    <div class="card">
+      <div class="section-toggle" onclick="toggleSection('steps')">
+        <h2>Paso a paso</h2>
+        <span class="toggle-icon open" id="steps-icon">▾</span>
+      </div>
+      <div class="collapsible open" id="steps-body">
+        <ul class="steps-list" id="steps-list"></ul>
+      </div>
+    </div>
+
+    <!-- VERIFY -->
+    <div class="card">
+      <div class="section-toggle" onclick="toggleSection('verify')">
+        <h2>Verificar una raíz</h2>
+        <span class="toggle-icon" id="verify-icon">▾</span>
+      </div>
+      <div class="collapsible" id="verify-body">
+        <div class="verify-row">
+          <div class="field">
+            <label for="verifyInput">Valor de x</label>
+            <input type="number" id="verifyInput" placeholder="ej: 3" />
+          </div>
+          <button class="btn btn-primary" onclick="verificar()">Verificar</button>
+        </div>
+        <div id="verify-result"></div>
+      </div>
+    </div>
+
+    <!-- SHARE -->
+    <div class="card">
+      <div class="section-toggle" onclick="toggleSection('share')">
+        <h2>Compartir</h2>
+        <span class="toggle-icon" id="share-icon">▾</span>
+      </div>
+      <div class="collapsible" id="share-body">
+        <p class="share-desc">Al abrir esta URL se cargan los coeficientes automáticamente.</p>
+        <div class="share-row">
+          <input type="text" id="share-url" readonly />
+          <button class="btn btn-ghost" onclick="copyUrl()" style="flex-shrink:0;padding:10px 16px;font-size:13px;">Copiar</button>
+        </div>
+        <p id="copy-feedback">¡Copiado!</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- HISTORY -->
+  <div class="card" id="history-card" style="display:none;">
+    <div class="section-toggle" onclick="toggleSection('history')">
+      <h2>Historial</h2>
+      <span class="toggle-icon open" id="history-icon">▾</span>
+    </div>
+    <div class="collapsible open" id="history-body">
+      <ul id="history-list"></ul>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let historyLog = [];
+let chart = null;
+let lastA, lastB, lastC;
+let displayFormat = 'dec'; // 'dec' | 'frac' | 'both'
+
+// ─── FORMAT TOGGLE ───────────────────────────────────────
+function setFormat(fmt) {
+  displayFormat = fmt;
+  ['dec','frac','both'].forEach(f => document.getElementById('pill-'+f).classList.toggle('active', f === fmt));
+  // re-render if we already have results
+  if (lastA !== undefined) calcular();
+}
+
+// ─── FRACTION MATH ───────────────────────────────────────
+function gcd(a, b) {
+  a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b));
+  while (b) { let t = b; b = a % b; a = t; }
+  return a;
+}
+
+// Converts a decimal to a fraction string (HTML). Returns null if irrational/complex.
+// We detect if the value is a "nice" fraction by checking numerator * denominator.
+function toFracHTML(num, denom) {
+  // num and denom are the raw numerator and denominator before division
+  const g = gcd(Math.abs(num), Math.abs(denom));
+  const n = num / g;
+  const d = denom / g;
+  if (d === 1) return `<span>${n}</span>`;
+  const sign = (n < 0) !== (d < 0) ? '−' : '';
+  return `${sign}<span class="frac"><span class="num">${Math.abs(n)}</span><span class="den">${Math.abs(d)}</span></span>`;
+}
+
+// Given a, b, c, delta: return {x1frac, x2frac} HTML strings or null if irrational
+function getRootFracs(a, b, c, delta) {
+  // x = (-b ± sqrt(delta)) / (2a)
+  // Only "nice" if delta is a perfect square
+  if (delta < 0) return null; // complex → no fraction representation
+
+  const sqrtD = Math.sqrt(delta);
+  const sqrtDint = Math.round(sqrtD);
+  if (Math.abs(sqrtDint * sqrtDint - delta) > 1e-9) return null; // irrational
+
+  const denom = 2 * a;
+  const x1num = -b + sqrtDint;
+  const x2num = -b - sqrtDint;
+
+  return {
+    x1: toFracHTML(x1num, denom),
+    x2: toFracHTML(x2num, denom),
+  };
+}
+
+// ─── YOUTUBE BG ──────────────────────────────────────────
+function extractYtId(url) {
+  const m = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function setYtBg() {
+  const url = document.getElementById('yt-url-input').value.trim();
+  const id = extractYtId(url);
+  if (!id) { alert('URL de YouTube inválida. Pegá un link tipo: https://www.youtube.com/watch?v=XXXXXXXXX'); return; }
+  const iframe = document.getElementById('yt-bg');
+  iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3`;
+}
+
+// ─── LOAD FROM URL ───────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const p = new URLSearchParams(location.search);
+  if (p.has('a') && p.has('b') && p.has('c')) {
+    document.getElementById('coefA').value = p.get('a');
+    document.getElementById('coefB').value = p.get('b');
+    document.getElementById('coefC').value = p.get('c');
+    updatePreview();
+    calcular();
+  }
+  if (p.has('yt')) {
+    const id = p.get('yt');
+    document.getElementById('yt-url-input').value = `https://www.youtube.com/watch?v=${id}`;
+    document.getElementById('yt-bg').src = `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3`;
+  }
+});
+
+// ─── EQ PREVIEW ──────────────────────────────────────────
+function updatePreview() {
+  const a = parseFloat(document.getElementById('coefA').value);
+  const b = parseFloat(document.getElementById('coefB').value);
+  const c = parseFloat(document.getElementById('coefC').value);
+  const el = document.getElementById('eq-preview');
+  if (isNaN(a) && isNaN(b) && isNaN(c)) { el.textContent = '—'; return; }
+  let s = '';
+  if (!isNaN(a)) s += (a===1?'':a===-1?'−':fmt(a))+'x²';
+  if (!isNaN(b)) {
+    if (b >= 0) s += (s?' + ':'')+( b===1?'':b)+'x';
+    else        s += ' − '+(b===-1?'':Math.abs(b))+'x';
+  }
+  if (!isNaN(c)) {
+    if (c >= 0) s += (s?' + ':'')+c;
+    else        s += ' − '+Math.abs(c);
+  }
+  el.textContent = s ? s+' = 0' : '—';
+}
+
+function fmt(n) { return n<0?'('+n+')':''+n; }
+function r6(n)  { return parseFloat(n.toFixed(6)); }
+function r4(n)  { return parseFloat(n.toFixed(4)); }
+
+// ─── BUILD ROOT CARD HTML ─────────────────────────────────
+function rootCardHTML(label, decVal, fracHTML, isComplex) {
+  const showDec  = displayFormat === 'dec'  || displayFormat === 'both';
+  const showFrac = displayFormat === 'frac' || displayFormat === 'both';
+  const hasFrac  = fracHTML !== null && !isComplex;
+
+  let inner = '';
+  if (isComplex) {
+    inner = `<p class="rval complex">${decVal}</p>`;
+  } else {
+    if (showFrac && hasFrac) {
+      inner += `<p class="rval" style="font-size:20px;">${fracHTML}</p>`;
+      if (showDec) inner += `<p class="rval-alt">${decVal}</p>`;
+    } else if (showFrac && !hasFrac) {
+      // irrational — show decimal with note
+      inner += `<p class="rval">${decVal}</p>`;
+      if (showFrac) inner += `<p class="rval-alt" style="font-size:11px;color:var(--faint);">irracional — sin forma exacta de fracción</p>`;
+    } else {
+      inner += `<p class="rval">${decVal}</p>`;
+    }
+  }
+
+  return `<div class="root-card">
+    <p class="rlabel">${label}</p>
+    ${inner}
+  </div>`;
+}
+
+// ─── MAIN CALC ────────────────────────────────────────────
+function calcular() {
+  const a = parseFloat(document.getElementById('coefA').value);
+  const b = parseFloat(document.getElementById('coefB').value);
+  const c = parseFloat(document.getElementById('coefC').value);
+
+  const raizEl  = document.getElementById('raices-container');
+  const discEl  = document.getElementById('disc-val');
+  const formEl  = document.getElementById('formula-text');
+  const badgeEl = document.getElementById('tipo-badge');
+  const stepsEl = document.getElementById('steps-list');
+
+  document.getElementById('result-section').classList.remove('hidden');
+  raizEl.innerHTML=''; badgeEl.innerHTML=''; stepsEl.innerHTML='';
+  document.getElementById('verify-result').style.display='none';
+  document.getElementById('verifyInput').value='';
+
+  if (isNaN(a)||isNaN(b)||isNaN(c)) {
+    raizEl.innerHTML='<p class="error-msg">Completá los tres coeficientes.</p>';
+    discEl.textContent='—'; formEl.textContent='—'; return;
+  }
+  if (a===0) {
+    raizEl.innerHTML='<p class="error-msg">El coeficiente <strong>a</strong> no puede ser 0.</p>';
+    discEl.textContent='—'; formEl.textContent='—'; return;
+  }
+
+  lastA=a; lastB=b; lastC=c;
+  const delta = b*b - 4*a*c;
+  discEl.textContent = r6(delta);
+  formEl.textContent = `x = (−(${b}) ± √(${b}² − 4·${a}·${c})) / (2·${a})`;
+
+  const fracs = getRootFracs(a, b, c, delta);
+  let x1, x2, rootsStr;
+
+  if (delta > 0) {
+    x1 = r6((-b + Math.sqrt(delta)) / (2*a));
+    x2 = r6((-b - Math.sqrt(delta)) / (2*a));
+    raizEl.innerHTML = `<div class="roots-grid two">
+      ${rootCardHTML('x₁', x1, fracs?.x1 ?? null, false)}
+      ${rootCardHTML('x₂', x2, fracs?.x2 ?? null, false)}
+    </div>`;
+    badgeEl.innerHTML='<span class="badge pos">Δ &gt; 0 — dos raíces reales y distintas</span>';
+    rootsStr=`x₁=${x1}, x₂=${x2}`;
+  } else if (delta===0) {
+    x1=x2=r6(-b/(2*a));
+    raizEl.innerHTML = `<div class="roots-grid one">
+      ${rootCardHTML('x₁ = x₂  raíz doble', x1, fracs?.x1 ?? null, false)}
+    </div>`;
+    badgeEl.innerHTML='<span class="badge zer">Δ = 0 — raíz real doble</span>';
+    rootsStr=`x = ${x1}`;
+  } else {
+    const re = r6(-b/(2*a));
+    const im = r6(Math.sqrt(-delta)/(2*a));
+    x1=null; x2=null;
+    raizEl.innerHTML = `<div class="roots-grid two">
+      ${rootCardHTML('x₁', `${re} + ${im}i`, null, true)}
+      ${rootCardHTML('x₂', `${re} − ${im}i`, null, true)}
+    </div>`;
+    badgeEl.innerHTML='<span class="badge neg">Δ &lt; 0 — raíces complejas</span>';
+    rootsStr=`x₁=${re}+${im}i, x₂=${re}−${im}i`;
+  }
+
+  buildSteps(a, b, c, delta);
+  drawChart(a, b, c, delta, x1, x2);
+
+  // share URL
+  const url = new URL(location.href.split('?')[0]);
+  url.searchParams.set('a',a); url.searchParams.set('b',b); url.searchParams.set('c',c);
+  const ytUrl = document.getElementById('yt-url-input').value.trim();
+  const ytId = extractYtId(ytUrl);
+  if (ytId) url.searchParams.set('yt', ytId);
+  document.getElementById('share-url').value = url.toString();
+
+  addHistory(a, b, c, rootsStr);
+}
+
+// ─── STEPS ───────────────────────────────────────────────
+function buildSteps(a, b, c, delta) {
+  const el = document.getElementById('steps-list');
+  const steps = [
+    { title: 'Identificar los coeficientes', math: `a = ${a},  b = ${b},  c = ${c}` },
+    { title: 'Calcular el discriminante',
+      math: `Δ = b² − 4ac = (${b})² − 4·(${a})·(${c}) = ${b*b} − ${4*a*c} = ${r6(delta)}` },
+    { title: delta>0 ? 'Δ > 0: dos raíces reales distintas' : delta===0 ? 'Δ = 0: raíz real doble' : 'Δ < 0: raíces complejas conjugadas',
+      math: delta>=0
+        ? `√Δ = √${r6(delta)} = ${r6(Math.sqrt(Math.abs(delta)))}`
+        : `√|Δ| = √${r6(-delta)} = ${r6(Math.sqrt(-delta))} → parte imaginaria` },
+    { title: 'Aplicar la fórmula',
+      math: `x = (−(${b}) ± √(${r6(delta)})) / (2·${a}) = (${-b} ± ${r6(Math.sqrt(Math.abs(delta)))}) / ${2*a}` },
+  ];
+  if (delta>0) {
+    const x1=r6((-b+Math.sqrt(delta))/(2*a)), x2=r6((-b-Math.sqrt(delta))/(2*a));
+    steps.push({ title:'Calcular x₁', math:`x₁ = (${-b} + ${r6(Math.sqrt(delta))}) / ${2*a} = ${x1}` });
+    steps.push({ title:'Calcular x₂', math:`x₂ = (${-b} − ${r6(Math.sqrt(delta))}) / ${2*a} = ${x2}` });
+  } else if (delta===0) {
+    steps.push({ title:'Calcular la raíz doble', math:`x = −b/(2a) = ${-b}/${2*a} = ${r6(-b/(2*a))}` });
+  } else {
+    const re=r6(-b/(2*a)), im=r6(Math.sqrt(-delta)/(2*a));
+    steps.push({ title:'Parte real e imaginaria', math:`Re = ${-b}/${2*a} = ${re};   Im = √${r6(-delta)}/${2*a} = ${im}` });
+  }
+  el.innerHTML = steps.map(s=>`<li><div><div>${s.title}</div><div class="step-math">${s.math}</div></div></li>`).join('');
+}
+
+// ─── CHART ───────────────────────────────────────────────
+function drawChart(a, b, c, delta, x1, x2) {
+  const vertex = -b/(2*a);
+  const spread = Math.max(4, Math.abs(x1??vertex)+3, Math.abs(x2??vertex)+3);
+  const xMin=vertex-spread, xMax=vertex+spread;
+  const xs=[], ys=[];
+  for (let i=0;i<=120;i++) {
+    const x=xMin+(xMax-xMin)*i/120;
+    xs.push(r4(x)); ys.push(r4(a*x*x+b*x+c));
+  }
+  if (chart){chart.destroy();chart=null;}
+  const ctx=document.getElementById('parabolaChart').getContext('2d');
+  const rootPts=[];
+  if (x1!==null&&x2!==null&&delta>=0) {
+    rootPts.push({x:x1,y:0});
+    if (delta>0) rootPts.push({x:x2,y:0});
+  }
+  chart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:xs,
+      datasets:[
+        { label:'f(x)', data:ys, borderColor:'rgba(240,239,233,0.85)', borderWidth:2, pointRadius:0, tension:0.3, fill:false },
+        { label:'Raíces', data:rootPts.map(p=>({x:p.x,y:0})), parsing:false, borderColor:'transparent', backgroundColor:'#7dd98a', pointRadius:6, pointHoverRadius:7, showLine:false, type:'scatter' },
+        { label:'Vértice', data:[{x:r4(vertex),y:r4(a*vertex*vertex+b*vertex+c)}], parsing:false, borderColor:'transparent', backgroundColor:'#7aabf4', pointRadius:6, pointHoverRadius:7, showLine:false, type:'scatter' }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:{duration:400},
+      plugins:{legend:{display:false}, tooltip:{callbacks:{title:i=>`x = ${i[0].label}`,label:i=>`f(x) = ${i[0].formattedValue}`}}},
+      scales:{
+        x:{type:'category', ticks:{font:{family:"'DM Mono',monospace",size:11},color:'rgba(240,239,233,0.35)',maxTicksLimit:8,callback:(v,i)=>xs[i]%1===0?xs[i]:''}, grid:{color:'rgba(255,255,255,0.05)'}, border:{color:'rgba(255,255,255,0.1)'}},
+        y:{ticks:{font:{family:"'DM Mono',monospace",size:11},color:'rgba(240,239,233,0.35)',maxTicksLimit:6}, grid:{color:'rgba(255,255,255,0.05)'}, border:{color:'rgba(255,255,255,0.1)'}}
+      }
+    }
+  });
+}
+
+// ─── VERIFY ──────────────────────────────────────────────
+function verificar() {
+  const x=parseFloat(document.getElementById('verifyInput').value);
+  const el=document.getElementById('verify-result');
+  el.style.display='block';
+  if (isNaN(x)){el.className='warn';el.textContent='Ingresá un valor numérico.';return;}
+  if (lastA===undefined){el.className='warn';el.textContent='Calculá primero.';return;}
+  const result=lastA*x*x+lastB*x+lastC;
+  if (Math.abs(result)<1e-9){
+    el.className='ok';el.textContent=`✓  f(${x}) = ${r6(result)} — ¡Es raíz de la ecuación!`;
+  } else {
+    el.className='err';el.textContent=`✗  f(${x}) = ${r6(result)} ≠ 0 — No es raíz.`;
+  }
+}
+
+// ─── SHARE ───────────────────────────────────────────────
+function copyUrl() {
+  const inp=document.getElementById('share-url');
+  inp.select(); inp.setSelectionRange(0,999);
+  navigator.clipboard.writeText(inp.value).catch(()=>document.execCommand('copy'));
+  const fb=document.getElementById('copy-feedback');
+  fb.style.display='block';
+  setTimeout(()=>fb.style.display='none',2000);
+}
+
+// ─── HISTORY ─────────────────────────────────────────────
+function addHistory(a,b,c,rootsStr) {
+  historyLog.unshift({a,b,c,rootsStr});
+  if (historyLog.length>8) historyLog.pop();
+  renderHistory();
+}
+function renderHistory() {
+  const card=document.getElementById('history-card');
+  const list=document.getElementById('history-list');
+  card.style.display=historyLog.length?'block':'none';
+  list.innerHTML=historyLog.map((h,i)=>`
+    <li onclick="loadHistory(${i})">
+      <span class="heq">${eqStr(h.a,h.b,h.c)}</span>
+      <span class="hroots">${h.rootsStr}</span>
+    </li>`).join('');
+}
+function loadHistory(i) {
+  const h=historyLog[i];
+  document.getElementById('coefA').value=h.a;
+  document.getElementById('coefB').value=h.b;
+  document.getElementById('coefC').value=h.c;
+  updatePreview(); calcular();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function eqStr(a,b,c) {
+  let s=(a===1?'':a===-1?'−':a)+'x²';
+  if (b>=0) s+=' + '+(b===1?'':b)+'x'; else s+=' − '+(b===-1?'':Math.abs(b))+'x';
+  if (c>=0) s+=' + '+c; else s+=' − '+Math.abs(c);
+  return s+' = 0';
+}
+
+// ─── TOGGLE ──────────────────────────────────────────────
+function toggleSection(id) {
+  document.getElementById(id+'-body').classList.toggle('open');
+  document.getElementById(id+'-icon').classList.toggle('open');
+}
+
+// ─── LIMPIAR ─────────────────────────────────────────────
+function limpiar() {
+  ['coefA','coefB','coefC'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('eq-preview').textContent='—';
+  document.getElementById('result-section').classList.add('hidden');
+  if (chart){chart.destroy();chart=null;}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Enter')calcular();});
+</script>
+</body>
+</html>
